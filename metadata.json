@@ -1,0 +1,5 @@
+{
+  "name": "Legalis AI Risk Scanner",
+  "description": "An intelligent contract analysis tool that translates complex legal agreements into simple risk summaries using Gemini 3.",
+  "requestFramePermissions": []
+}
