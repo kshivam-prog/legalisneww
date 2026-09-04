@@ -1,0 +1,58 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ai-agreement-analyzer-api
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=False
+      - HOST=0.0.0.0
+      - PORT=8000
+      - DATABASE_URL=sqlite:///./agreement_analyzer.db
+      - LLM_MODEL_NAME=mistralai/Mistral-7B-Instruct-v0.1
+      - LLM_DEVICE=cpu
+      - LLM_CACHE_DIR=/app/models
+      - ENABLE_LOCAL_LLM=False
+      - UPLOAD_DIR=/app/uploads
+      - MAX_TOKENS=512
+    volumes:
+      - ./backend:/app/backend
+      - ai-models:/app/models
+      - ai-uploads:/app/uploads
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Reverse proxy (Nginx) for frontend + API
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
+    container_name: ai-agreement-analyzer-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  ai-models:
+    driver: local
+  ai-uploads:
+    driver: local
+
+networks:
+  default:
+    name: ai-agreement-analyzer-network
