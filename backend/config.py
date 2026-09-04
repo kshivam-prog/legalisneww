@@ -41,6 +41,7 @@ class Settings:
     LLM_DEVICE = os.getenv("LLM_DEVICE", "cpu")  # "cuda" for GPU
     LLM_CACHE_DIR = os.getenv("LLM_CACHE_DIR", "./models")
     MAX_TOKENS = int(os.getenv("MAX_TOKENS", "512"))
+    ENABLE_LOCAL_LLM = os.getenv("ENABLE_LOCAL_LLM", "False").lower() == "true"
     
     # Document Processing
     CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", "1000"))

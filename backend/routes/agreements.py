@@ -3,7 +3,7 @@ Agreement analysis API endpoints
 Handles document upload, analysis, and history management
 """
 
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 import os
@@ -36,8 +36,8 @@ router = APIRouter()
 @router.post("/agreements/upload", response_model=AnalysisResponse)
 async def upload_agreement(
     file: Optional[UploadFile] = File(None),
-    text_input: Optional[str] = None,
-    url_input: Optional[str] = None,
+    text_input: Optional[str] = Form(None),
+    url_input: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     background_tasks: BackgroundTasks = None
 ) -> AnalysisResponse:
@@ -59,15 +59,6 @@ async def upload_agreement(
     Returns:
         Analysis response with results
     """
-    
-    # Ensure LLM is loaded
-    if not llm_manager.is_loaded():
-        logger.info("Loading LLM model...")
-        if not llm_manager.load_model():
-            raise HTTPException(
-                status_code=503,
-                detail="LLM model not available. Please check configuration."
-            )
     
     try:
         document_text = ""
@@ -151,9 +142,19 @@ async def upload_agreement(
         
         # Perform analysis
         analyzer = AgreementAnalyzer()
+        llm_available = llm_manager.is_loaded()
+        if not llm_available and settings.ENABLE_LOCAL_LLM:
+            logger.info("Loading optional local LLM model...")
+            llm_available = llm_manager.load_model()
+        if not llm_available:
+            logger.info("Local LLM disabled or unavailable; using built-in agreement checks")
         
         try:
-            results = analyzer.analyze_full(document_text, filename)
+            results = (
+                analyzer.analyze_full(document_text, filename)
+                if llm_available
+                else analyzer.analyze_without_model(document_text)
+            )
             
             # Save analysis to database
             analysis = Analysis(

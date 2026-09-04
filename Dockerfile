@@ -1,6 +1,4 @@
-# Multi-stage Dockerfile for AI Agreement Analyzer
-
-# Stage 1: Backend builder
+# Backend image for AI Agreement Analyzer
 FROM python:3.11-slim as backend-builder
 
 WORKDIR /app/backend
@@ -14,19 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Stage 2: Frontend builder
-FROM node:18-alpine as frontend-builder
-
-WORKDIR /app/frontend
-
-# Copy frontend files
-COPY frontend/package.json package-lock.json ./
-RUN npm ci
-
-COPY frontend ./
-RUN npm run build
-
-# Stage 3: Runtime
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -45,9 +30,6 @@ COPY --from=backend-builder /usr/local/bin /usr/local/bin
 
 # Copy backend code
 COPY backend /app/backend
-
-# Copy built frontend
-COPY --from=frontend-builder /app/frontend/dist /app/frontend/dist
 
 # Create necessary directories
 RUN mkdir -p /app/uploads /app/models /app/logs && \

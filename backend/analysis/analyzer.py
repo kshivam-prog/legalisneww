@@ -379,6 +379,62 @@ class AgreementAnalyzer:
             logger.error(f"Full analysis failed: {str(e)}")
             raise
 
+    def analyze_without_model(self, document_text: str) -> Dict[str, Any]:
+        """Analyze an agreement locally when the optional LLM is unavailable."""
+        start_time = time.time()
+        text = self.prepare_document(document_text)
+        risk_terms = {
+            "auto-renew": ("Automatic renewal", RiskLevel.MEDIUM),
+            "arbitration": ("Arbitration", RiskLevel.MEDIUM),
+            "indemn": ("Indemnity", RiskLevel.HIGH),
+            "liability": ("Liability limits", RiskLevel.HIGH),
+            "terminate": ("Termination", RiskLevel.MEDIUM),
+            "penalt": ("Penalties", RiskLevel.HIGH),
+            "personal data": ("Personal data", RiskLevel.HIGH),
+            "privacy": ("Privacy", RiskLevel.MEDIUM),
+            "governing law": ("Governing law", RiskLevel.LOW),
+        }
+        clauses = []
+        lowered = text.lower()
+        for term, (title, level) in risk_terms.items():
+            if term in lowered:
+                sentence = next(
+                    (part.strip() for part in re.split(r"(?<=[.!?])\s+", text)
+                     if term in part.lower()),
+                    f"This agreement contains a {term} provision.",
+                )
+                clauses.append(KeyClause(
+                    title=title,
+                    content=sentence[:500],
+                    risk_level=level,
+                    pro="This provision may clarify the parties' responsibilities.",
+                    con="Check the scope, cost, and exceptions before signing.",
+                ))
+
+        if not clauses:
+            clauses.append(KeyClause(
+                title="General review",
+                content="No common high-risk terms were detected by the local review.",
+                risk_level=RiskLevel.LOW,
+                pro="The agreement has no obvious red flags in the supported checks.",
+                con="A local automated review cannot replace legal advice.",
+            ))
+
+        highest = max((clause.risk_level for clause in clauses), key=lambda level: {
+            RiskLevel.LOW: 0, RiskLevel.MEDIUM: 1, RiskLevel.HIGH: 2
+        }[level])
+        self.risk_level = highest
+        return {
+            "summary": "Local review found " + str(len(clauses)) + " agreement areas that need attention.",
+            "risk_level": highest,
+            "key_clauses": clauses[:5],
+            "pros": ["The document was reviewed locally without sending it to an external service."],
+            "cons": ["This fallback checks common risk terms and does not understand every legal nuance."],
+            "recommendations": "Review each flagged clause and ask a qualified legal professional about any term you do not understand.",
+            "processing_time_seconds": int(time.time() - start_time),
+            "token_count": 0,
+        }
+
 
 # Global analyzer instance
 analyzer = AgreementAnalyzer()

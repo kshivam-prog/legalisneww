@@ -29,7 +29,7 @@ Complete guide to deploy AI Agreement Analyzer to production.
 
 2. **Build and run with Docker Compose**
    ```bash
-   docker-compose up --build
+   docker compose up --build -d
    ```
 
 3. **Access the application**
@@ -39,15 +39,16 @@ Complete guide to deploy AI Agreement Analyzer to production.
 
 4. **Stop and cleanup**
    ```bash
-   docker-compose down
+   docker compose down
    ```
 
 ### Configuration
 
-Edit `.env` before running:
+The default Docker deployment uses the built-in local checks and does not need an API key or a downloaded LLM. To enable the optional Hugging Face model, edit `docker-compose.yml`:
 ```bash
-export LLM_DEVICE=cpu  # or cuda, mps
-export LLM_MODEL_NAME=mistralai/Mistral-7B-Instruct-v0.1
+ENABLE_LOCAL_LLM=True
+LLM_DEVICE=cpu  # or cuda, mps
+LLM_MODEL_NAME=mistralai/Mistral-7B-Instruct-v0.1
 ```
 
 ## Local Installation
@@ -82,7 +83,7 @@ export LLM_MODEL_NAME=mistralai/Mistral-7B-Instruct-v0.1
 
 1. **Setup Node environment**
    ```bash
-   cd frontend
+   cd <project-root>
    npm install
    npm run build
    ```
